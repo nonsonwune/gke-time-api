@@ -166,7 +166,7 @@ resource "kubernetes_deployment" "time_api" {
 
       spec {
         container {
-          image = "gcr.io/${var.project_id}/time-api:latest"
+          image = "gcr.io/${var.project_id}/time-api:${var.image_tag}"
           name  = "time-api"
 
           port {
@@ -175,13 +175,31 @@ resource "kubernetes_deployment" "time_api" {
 
           resources {
             limits = {
-              cpu    = "0.5"
+              cpu    = "500m"
               memory = "512Mi"
             }
             requests = {
               cpu    = "250m"
-              memory = "50Mi"
+              memory = "256Mi"
             }
+          }
+
+          readiness_probe {
+            http_get {
+              path = "/time"
+              port = 8080
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 5
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/time"
+              port = 8080
+            }
+            initial_delay_seconds = 15
+            period_seconds        = 10
           }
         }
       }

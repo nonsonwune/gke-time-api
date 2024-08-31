@@ -3,5 +3,6 @@
 *.tfstate.backup
 *.tfvars
 
-clau/
-scripts/
+clau_/
+scripts_/
+*.json

@@ -1,4 +1,0 @@
-project_id = "time-api-gke-project-434215"
-project_number = "1044550173168"
-region     = "us-central1"
-gke_num_nodes = 2

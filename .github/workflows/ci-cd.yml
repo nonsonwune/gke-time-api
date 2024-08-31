@@ -33,15 +33,6 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
-
       - name: Configure Docker
         run: gcloud auth configure-docker
 
@@ -50,14 +41,21 @@ jobs:
           docker build -t gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA .
           docker push gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA
 
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan -var="image_tag=$GITHUB_SHA"
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
       - name: Get GKE Credentials
         run: gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
 
-      - name: Update Deployment image
+      - name: Wait for deployment
         run: |
-          terraform state pull > terraform.tfstate
-          terraform apply -auto-approve \
-            -var="image_tag=$GITHUB_SHA"
+          kubectl rollout status deployment/time-api -n time-api --timeout=300s
 
       - name: Test API
         run: |

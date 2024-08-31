@@ -16,3 +16,8 @@ variable "gke_num_nodes" {
   default     = 2
   description = "number of gke nodes"
 }
+
+variable "image_tag" {
+  description = "The tag for the time-api Docker image"
+  type        = string
+}
