@@ -1,105 +1,68 @@
-# kubernetes.tf
+resource "null_resource" "kubernetes_resources" {
+  depends_on = [google_container_cluster.time_api_cluster, google_container_node_pool.time_api_nodes]
 
-# Kubernetes Namespace
-resource "kubernetes_namespace" "time_api" {
-  metadata {
-    name = "time-api"
+  provisioner "local-exec" {
+    command = <<EOT
+      gcloud container clusters get-credentials ${google_container_cluster.time_api_cluster.name} \
+        --zone ${google_container_cluster.time_api_cluster.location} \
+        --project ${var.project_id}
+
+      kubectl create namespace time-api
+
+      kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: time-api
+  namespace: time-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: time-api
+  template:
+    metadata:
+      labels:
+        app: time-api
+    spec:
+      containers:
+      - name: time-api
+        image: gcr.io/${var.project_id}/time-api:${var.image_tag}
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        readinessProbe:
+          httpGet:
+            path: /time
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /time
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: time-api
+  namespace: time-api
+spec:
+  selector:
+    app: time-api
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer
+EOF
+    EOT
   }
-
-  depends_on = [
-    terraform_data.kubernetes_provider_ready
-  ]
-}
-
-# Kubernetes Deployment
-resource "kubernetes_deployment" "time_api" {
-  metadata {
-    name      = "time-api"
-    namespace = kubernetes_namespace.time_api.metadata[0].name
-  }
-
-  spec {
-    replicas = 3
-
-    selector {
-      match_labels = {
-        app = "time-api"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          app = "time-api"
-        }
-      }
-
-      spec {
-        container {
-          image = "gcr.io/${var.project_id}/time-api:${var.image_tag}"
-          name  = "time-api"
-
-          port {
-            container_port = 8080
-          }
-
-          resources {
-            limits = {
-              cpu    = "500m"
-              memory = "512Mi"
-            }
-            requests = {
-              cpu    = "250m"
-              memory = "256Mi"
-            }
-          }
-
-          readiness_probe {
-            http_get {
-              path = "/time"
-              port = 8080
-            }
-            initial_delay_seconds = 10
-            period_seconds        = 5
-          }
-
-          liveness_probe {
-            http_get {
-              path = "/time"
-              port = 8080
-            }
-            initial_delay_seconds = 15
-            period_seconds        = 10
-          }
-        }
-      }
-    }
-  }
-
-  depends_on = [
-    kubernetes_namespace.time_api
-  ]
-}
-
-# Kubernetes Service
-resource "kubernetes_service" "time_api" {
-  metadata {
-    name      = "time-api"
-    namespace = kubernetes_namespace.time_api.metadata[0].name
-  }
-  spec {
-    selector = {
-      app = kubernetes_deployment.time_api.spec[0].template[0].metadata[0].labels.app
-    }
-    port {
-      port        = 80
-      target_port = 8080
-    }
-
-    type = "LoadBalancer"
-  }
-
-  depends_on = [
-    kubernetes_deployment.time_api
-  ]
 }

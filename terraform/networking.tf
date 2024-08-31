@@ -1,5 +1,3 @@
-# networking.tf
-
 # VPC
 resource "google_compute_network" "time_api_vpc" {
   name                    = "time-api-vpc"
@@ -11,7 +9,7 @@ resource "google_compute_subnetwork" "time_api_subnet" {
   name          = "time-api-subnet"
   region        = var.region
   network       = google_compute_network.time_api_vpc.name
-  ip_cidr_range = "10.10.0.0/24"
+  ip_cidr_range = "10.0.0.0/24"
 }
 
 # NAT Router
@@ -49,7 +47,7 @@ resource "google_compute_firewall" "internal" {
     ports    = ["0-65535"]
   }
 
-  source_ranges = ["10.10.0.0/24"]
+  source_ranges = ["10.0.0.0/24"]
 }
 
 # Firewall rule to allow HTTP/HTTPS traffic

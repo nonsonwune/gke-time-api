@@ -1,12 +1,7 @@
-# kubernetes_provider.tf
-
-# Kubernetes provider configuration
 provider "kubernetes" {
-  config_path    = "${path.module}/kubeconfig"
-  config_context = "gke_${var.project_id}_${google_container_cluster.time_api_cluster.location}_${google_container_cluster.time_api_cluster.name}"
-}
-
-# Terraform data resource to ensure Kubernetes provider is configured after kubeconfig is ready
-resource "terraform_data" "kubernetes_provider_ready" {
-  depends_on = [terraform_data.kubeconfig_ready]
+  host  = "https://${google_container_cluster.time_api_cluster.endpoint}"
+  token = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(
+    google_container_cluster.time_api_cluster.master_auth[0].cluster_ca_certificate
+  )
 }

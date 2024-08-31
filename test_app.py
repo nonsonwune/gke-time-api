@@ -19,6 +19,16 @@ class TestApp(unittest.TestCase):
         except ValueError:
             self.fail("Time is not in ISO format")
 
+    def test_time_is_current(self):
+        response = self.client.get("/time")
+        data = json.loads(response.data)
+        returned_time = datetime.datetime.fromisoformat(data["current_time"])
+        current_time = datetime.datetime.now()
+        time_difference = current_time - returned_time
+        self.assertLess(
+            time_difference.total_seconds(), 1
+        )  # Ensure time difference is less than 1 second
+
 
 if __name__ == "__main__":
     unittest.main()
