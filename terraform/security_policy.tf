@@ -1,4 +1,4 @@
-# terraform/security_policy.tf
+# security_policy.tf
 
 resource "google_compute_security_policy" "policy" {
   name = "time-api-security-policy"

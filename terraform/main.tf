@@ -1,4 +1,17 @@
-# terraform/main.tf
+# main.tf
+
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 6.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
+    }
+  }
+}
 
 # Configure the Google Cloud provider
 provider "google" {
@@ -9,72 +22,6 @@ provider "google" {
 
 # Add the google_client_config data source
 data "google_client_config" "default" {}
-
-# VPC
-resource "google_compute_network" "time_api_vpc" {
-  name                    = "time-api-vpc"
-  auto_create_subnetworks = false
-}
-
-# Subnet
-resource "google_compute_subnetwork" "time_api_subnet" {
-  name          = "time-api-subnet"
-  region        = var.region
-  network       = google_compute_network.time_api_vpc.name
-  ip_cidr_range = "10.10.0.0/24"
-}
-
-# NAT Router
-resource "google_compute_router" "time_api_router" {
-  name    = "time-api-router"
-  region  = var.region
-  network = google_compute_network.time_api_vpc.name
-}
-
-# NAT Gateway
-resource "google_compute_router_nat" "time_api_nat" {
-  name                               = "time-api-nat"
-  router                             = google_compute_router.time_api_router.name
-  region                             = var.region
-  nat_ip_allocate_option             = "AUTO_ONLY"
-  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
-}
-
-# Firewall rule to allow internal communication
-resource "google_compute_firewall" "internal" {
-  name    = "time-api-allow-internal"
-  network = google_compute_network.time_api_vpc.name
-
-  allow {
-    protocol = "icmp"
-  }
-
-  allow {
-    protocol = "tcp"
-    ports    = ["0-65535"]
-  }
-
-  allow {
-    protocol = "udp"
-    ports    = ["0-65535"]
-  }
-
-  source_ranges = ["10.10.0.0/24"]
-}
-
-# Firewall rule to allow HTTP/HTTPS traffic
-resource "google_compute_firewall" "http" {
-  name    = "time-api-allow-http"
-  network = google_compute_network.time_api_vpc.name
-
-  allow {
-    protocol = "tcp"
-    ports    = ["80", "443"]
-  }
-
-  source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["gke-node", "time-api-gke"]
-}
 
 # GKE cluster
 resource "google_container_cluster" "time_api_cluster" {
@@ -115,113 +62,58 @@ resource "google_container_node_pool" "time_api_nodes" {
       env = "time-api-production"
     }
 
-    workload_metadata_config {
-      mode = "GKE_METADATA"
-    }
-
-    machine_type = "e2-medium"
+    machine_type = "e2-standard-2"
     tags         = ["gke-node", "time-api-gke"]
     metadata = {
       disable-legacy-endpoints = "true"
     }
   }
+
+  depends_on = [
+    google_container_cluster.time_api_cluster
+  ]
 }
 
-# Updated Kubernetes provider configuration
-provider "kubernetes" {
-  host                   = "https://${google_container_cluster.time_api_cluster.endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(google_container_cluster.time_api_cluster.master_auth[0].cluster_ca_certificate)
+# Data source to fetch GKE cluster info
+data "google_container_cluster" "time_api_cluster" {
+  name     = google_container_cluster.time_api_cluster.name
+  location = google_container_cluster.time_api_cluster.location
+
+  depends_on = [
+    google_container_cluster.time_api_cluster,
+    google_container_node_pool.time_api_nodes
+  ]
 }
 
-# Kubernetes Namespace
-resource "kubernetes_namespace" "time_api" {
-  metadata {
-    name = "time-api"
+# Null resource to get GKE credentials and test connection
+resource "null_resource" "get_gke_credentials" {
+  provisioner "local-exec" {
+    command = <<EOT
+      gcloud container clusters get-credentials ${google_container_cluster.time_api_cluster.name} --zone ${google_container_cluster.time_api_cluster.location} --project ${var.project_id}
+      kubectl config view --raw > ${path.module}/kubeconfig
+      kubectl get nodes
+      echo ${path.module}/kubeconfig
+    EOT
   }
+
+  depends_on = [
+    google_container_cluster.time_api_cluster,
+    google_container_node_pool.time_api_nodes
+  ]
 }
 
-# Kubernetes Deployment
-resource "kubernetes_deployment" "time_api" {
-  metadata {
-    name      = "time-api"
-    namespace = kubernetes_namespace.time_api.metadata[0].name
+# Null resource to apply network policy
+resource "null_resource" "apply_network_policy" {
+  provisioner "local-exec" {
+    command = "kubectl apply -f network_policy.yaml"
   }
 
-  spec {
-    replicas = 3
-
-    selector {
-      match_labels = {
-        app = "time-api"
-      }
-    }
-
-    template {
-      metadata {
-        labels = {
-          app = "time-api"
-        }
-      }
-
-      spec {
-        container {
-          image = "gcr.io/${var.project_id}/time-api:${var.image_tag}"
-          name  = "time-api"
-
-          port {
-            container_port = 8080
-          }
-
-          resources {
-            limits = {
-              cpu    = "500m"
-              memory = "512Mi"
-            }
-            requests = {
-              cpu    = "250m"
-              memory = "256Mi"
-            }
-          }
-
-          readiness_probe {
-            http_get {
-              path = "/time"
-              port = 8080
-            }
-            initial_delay_seconds = 10
-            period_seconds        = 5
-          }
-
-          liveness_probe {
-            http_get {
-              path = "/time"
-              port = 8080
-            }
-            initial_delay_seconds = 15
-            period_seconds        = 10
-          }
-        }
-      }
-    }
-  }
+  depends_on = [
+    null_resource.get_gke_credentials
+  ]
 }
 
-# Kubernetes Service
-resource "kubernetes_service" "time_api" {
-  metadata {
-    name      = "time-api"
-    namespace = kubernetes_namespace.time_api.metadata[0].name
-  }
-  spec {
-    selector = {
-      app = kubernetes_deployment.time_api.spec[0].template[0].metadata[0].labels.app
-    }
-    port {
-      port        = 80
-      target_port = 8080
-    }
-
-    type = "LoadBalancer"
-  }
+# Terraform data resource to signal when kubeconfig is ready
+resource "terraform_data" "kubeconfig_ready" {
+  input = null_resource.get_gke_credentials.id
 }
