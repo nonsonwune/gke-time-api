@@ -1,4 +1,5 @@
 # .github/workflows/ci-cd.yml
+
 name: CI/CD Pipeline
 
 on:
@@ -20,12 +21,17 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Setup GCP credentials
-        uses: google-github-actions/auth@v0
+        uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
+
+      - name: Setup GCloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Terraform Init
         run: terraform init
@@ -36,11 +42,6 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
-      - name: Setup GCloud CLI
-        uses: google-github-actions/setup-gcloud@v0
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-
       - name: Configure Docker
         run: gcloud auth configure-docker
 
@@ -48,6 +49,9 @@ jobs:
         run: |
           docker build -t gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA .
           docker push gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA
+
+      - name: Get GKE Credentials
+        run: gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
 
       - name: Update Deployment image
         run: |

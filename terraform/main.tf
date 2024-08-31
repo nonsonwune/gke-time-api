@@ -7,6 +7,9 @@ provider "google" {
   credentials = file("terraform-sa-key.json")
 }
 
+# Add the google_client_config data source
+data "google_client_config" "default" {}
+
 # VPC
 resource "google_compute_network" "time_api_vpc" {
   name                    = "time-api-vpc"
@@ -124,7 +127,7 @@ resource "google_container_node_pool" "time_api_nodes" {
   }
 }
 
-# Kubernetes provider configuration
+# Updated Kubernetes provider configuration
 provider "kubernetes" {
   host                   = "https://${google_container_cluster.time_api_cluster.endpoint}"
   token                  = data.google_client_config.default.access_token

@@ -1,4 +1,4 @@
-# outputs.tf
+# terraform/outputs.tf
 
 output "kubernetes_cluster_name" {
   value       = google_container_cluster.time_api_cluster.name
