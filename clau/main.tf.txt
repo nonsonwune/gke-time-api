@@ -1,0 +1,138 @@
+# main.tf
+
+# Configure the Google Cloud provider
+provider "google" {
+  project     = var.project_id
+  region      = var.region
+  credentials = file("terraform-sa-key.json")
+}
+
+# Create a GKE cluster
+resource "google_container_cluster" "time_api_cluster" {
+  name     = "time-api-gke-cluster"
+  location = "${var.region}-a"  # Using a zonal cluster to stay within free tier
+  
+  # We can't create a cluster with no node pool defined, but we want to only use
+  # separately managed node pools. So we create the smallest possible default
+  # node pool and immediately delete it.
+  remove_default_node_pool = true
+  initial_node_count       = 1
+
+  network    = google_compute_network.time_api_vpc.name
+  subnetwork = google_compute_subnetwork.time_api_subnet.name
+
+  # Enable Workload Identity
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog"
+  }
+
+  # Enable Network Policy
+  network_policy {
+    enabled = true
+  }
+
+  # Enable Intranode Visibility
+  enable_intranode_visibility = true
+}
+
+# Separately Managed Node Pool
+resource "google_container_node_pool" "time_api_nodes" {
+  name       = "time-api-node-pool"
+  location   = "${var.region}-a"  # Using a zonal cluster to stay within free tier
+  cluster    = google_container_cluster.time_api_cluster.name
+  node_count = var.gke_num_nodes
+
+  node_config {
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/logging.write",
+      "https://www.googleapis.com/auth/monitoring",
+    ]
+
+    labels = {
+      env = "time-api-production"
+    }
+
+    # Enable Workload Identity on this node pool
+    workload_metadata_config {
+      mode = "GKE_METADATA"
+    }
+
+    machine_type = "e2-medium"  # Using a smaller instance type to reduce costs
+    tags         = ["gke-node", "time-api-gke"]
+    metadata = {
+      disable-legacy-endpoints = "true"
+    }
+
+    # Use the GKE service account
+    service_account = google_service_account.gke_sa.email
+  }
+}
+
+# VPC
+resource "google_compute_network" "time_api_vpc" {
+  name                    = "time-api-vpc"
+  auto_create_subnetworks = false
+}
+
+# Subnet
+resource "google_compute_subnetwork" "time_api_subnet" {
+  name          = "time-api-subnet"
+  region        = var.region
+  network       = google_compute_network.time_api_vpc.name
+  ip_cidr_range = "10.10.0.0/24"
+}
+
+# Firewall rule to allow internal communication
+resource "google_compute_firewall" "internal" {
+  name    = "time-api-allow-internal"
+  network = google_compute_network.time_api_vpc.name
+
+  allow {
+    protocol = "icmp"
+  }
+
+  allow {
+    protocol = "tcp"
+    ports    = ["0-65535"]
+  }
+
+  allow {
+    protocol = "udp"
+    ports    = ["0-65535"]
+  }
+
+  source_ranges = ["10.10.0.0/24"]
+}
+
+# Firewall rule to allow HTTP/HTTPS traffic
+resource "google_compute_firewall" "http" {
+  name    = "time-api-allow-http"
+  network = google_compute_network.time_api_vpc.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "443"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["gke-node", "time-api-gke"]
+}
+
+# Create a service account for the GKE nodes
+resource "google_service_account" "gke_sa" {
+  account_id   = "gke-node-sa"
+  display_name = "GKE Node Service Account"
+}
+
+# Assign roles to the GKE service account
+resource "google_project_iam_member" "gke_sa_roles" {
+  for_each = toset([
+    "roles/logging.logWriter",
+    "roles/monitoring.metricWriter",
+    "roles/monitoring.viewer",
+    "roles/stackdriver.resourceMetadata.writer"
+  ])
+  project = var.project_id
+  role    = each.key
+  member  = "serviceAccount:${google_service_account.gke_sa.email}"
+}
