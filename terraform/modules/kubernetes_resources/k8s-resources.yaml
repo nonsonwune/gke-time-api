@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: time-api
-          image: gcr.io/time-api-gke-project-434215/time-api:latest
+          image: gcr.io/time-api-gke-project-434215/time-api:${var.image_tag}
           ports:
             - containerPort: 8080
           resources:

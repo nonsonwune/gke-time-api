@@ -8,6 +8,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.10"
     }
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = ">= 1.7.0"
+    }
   }
 }
 
@@ -17,7 +21,7 @@ provider "google" {
 }
 
 provider "kubernetes" {
-  host                   = module.gke.cluster_endpoint
+  host                   = "https://${module.gke.cluster_endpoint}"
   cluster_ca_certificate = base64decode(module.gke.cluster_ca_certificate)
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
