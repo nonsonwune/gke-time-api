@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: time-api
-          image: gcr.io/time-api-gke-project-434215/time-api:${var.image_tag}
+          image: gcr.io/time-api-gke-project-434215/time-api:latest
           ports:
             - containerPort: 8080
           resources:
@@ -55,3 +55,19 @@ spec:
     - port: 80
       targetPort: 8080
   type: LoadBalancer
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all
+  namespace: time-api
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - {}
+  egress:
+    - {}

@@ -14,8 +14,12 @@ resource "kubernetes_namespace" "time_api" {
 }
 
 resource "kubectl_manifest" "time_api_resources" {
-  yaml_body = file("${path.module}/k8s-resources.yaml")
+  yaml_body  = file("${path.module}/k8s-resources.yaml")
+  depends_on = [kubernetes_namespace.time_api]
+}
 
+resource "kubectl_manifest" "network_policy" {
+  yaml_body  = file("${path.module}/network_policy.yaml")
   depends_on = [kubernetes_namespace.time_api]
 }
 
