@@ -1,19 +1,21 @@
-resource "google_compute_network" "time_api_vpc" {
-  name                    = "time-api-vpc"
-  auto_create_subnetworks = false
+# modules/networking/main.tf
+
+data "google_compute_network" "time_api_vpc" {
+  name    = var.vpc_name
+  project = var.project_id
 }
 
 resource "google_compute_subnetwork" "time_api_subnet" {
   name          = "time-api-subnet"
   region        = var.region
-  network       = google_compute_network.time_api_vpc.name
+  network       = data.google_compute_network.time_api_vpc.self_link
   ip_cidr_range = "10.0.0.0/24"
 }
 
 resource "google_compute_router" "time_api_router" {
   name    = "time-api-router"
   region  = var.region
-  network = google_compute_network.time_api_vpc.name
+  network = data.google_compute_network.time_api_vpc.self_link
 }
 
 resource "google_compute_router_nat" "time_api_nat" {
@@ -26,7 +28,7 @@ resource "google_compute_router_nat" "time_api_nat" {
 
 resource "google_compute_firewall" "internal" {
   name    = "time-api-allow-internal"
-  network = google_compute_network.time_api_vpc.name
+  network = data.google_compute_network.time_api_vpc.self_link
 
   allow {
     protocol = "icmp"
@@ -47,7 +49,7 @@ resource "google_compute_firewall" "internal" {
 
 resource "google_compute_firewall" "http" {
   name    = "time-api-allow-http"
-  network = google_compute_network.time_api_vpc.name
+  network = data.google_compute_network.time_api_vpc.self_link
 
   allow {
     protocol = "tcp"
@@ -59,7 +61,7 @@ resource "google_compute_firewall" "http" {
 }
 
 output "vpc_name" {
-  value = google_compute_network.time_api_vpc.name
+  value = data.google_compute_network.time_api_vpc.name
 }
 
 output "subnet_name" {

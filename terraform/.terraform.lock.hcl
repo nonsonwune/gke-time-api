@@ -19,7 +19,8 @@ provider "registry.terraform.io/gavinbunney/kubectl" {
 }
 
 provider "registry.terraform.io/hashicorp/google" {
-  version = "6.0.1"
+  version     = "6.0.1"
+  constraints = "~> 6.0"
   hashes = [
     "h1:4LFiWpYMS7yl3EbZRP/wPuxrgbOqOJDLgjfEu0sPnMc=",
     "zh:053bcc0e62396d10a4ef40e59dcdf7d4a1491839e0dfc945de7cef5d9106a566",
@@ -38,7 +39,8 @@ provider "registry.terraform.io/hashicorp/google" {
 }
 
 provider "registry.terraform.io/hashicorp/kubernetes" {
-  version = "2.32.0"
+  version     = "2.32.0"
+  constraints = "~> 2.10"
   hashes = [
     "h1:Cj3RHyw3wE3AkNlCtSNrZfjFNkShvaZR0K/K3pJlYJU=",
     "zh:0e715d7fb13a8ad569a5fdc937b488590633f6942e986196fdb17cd7b8f7720e",

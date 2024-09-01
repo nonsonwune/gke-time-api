@@ -1,3 +1,5 @@
+# modules/gke/main.tf
+
 resource "google_service_account" "gke_sa" {
   account_id   = "gke-service-account"
   display_name = "GKE Service Account"
@@ -25,6 +27,8 @@ resource "google_container_cluster" "time_api_cluster" {
   network    = var.vpc_name
   subnetwork = var.subnet_name
 
+  deletion_protection = false
+
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
@@ -35,7 +39,6 @@ resource "google_container_cluster" "time_api_cluster" {
 
   enable_intranode_visibility = true
 
-  # Add this block to ensure master_auth is available
   master_auth {
     client_certificate_config {
       issue_client_certificate = false
@@ -93,21 +96,4 @@ resource "google_compute_security_policy" "policy" {
     }
     description = "Allow all traffic"
   }
-}
-
-output "cluster_name" {
-  value = google_container_cluster.time_api_cluster.name
-}
-
-output "cluster_endpoint" {
-  value = google_container_cluster.time_api_cluster.endpoint
-}
-
-output "cluster_location" {
-  value = google_container_cluster.time_api_cluster.location
-}
-
-output "cluster_ca_certificate" {
-  value     = google_container_cluster.time_api_cluster.master_auth[0].cluster_ca_certificate
-  sensitive = true
 }

@@ -20,26 +20,32 @@ provider "google" {
   region  = var.region
 }
 
+
 provider "kubernetes" {
   host                   = "https://${module.gke.cluster_endpoint}"
   cluster_ca_certificate = base64decode(module.gke.cluster_ca_certificate)
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "gke-gcloud-auth-plugin"
-  }
+  token                  = data.google_client_config.default.access_token
+}
+
+data "google_client_config" "default" {}
+
+data "google_compute_network" "existing_vpc" {
+  name    = "time-api-vpc"
+  project = var.project_id
 }
 
 module "networking" {
   source     = "./modules/networking"
   project_id = var.project_id
   region     = var.region
+  vpc_name   = data.google_compute_network.existing_vpc.name
 }
 
 module "gke" {
   source        = "./modules/gke"
   project_id    = var.project_id
   region        = var.region
-  vpc_name      = module.networking.vpc_name
+  vpc_name      = data.google_compute_network.existing_vpc.name
   subnet_name   = module.networking.subnet_name
   gke_num_nodes = var.gke_num_nodes
 }
@@ -48,11 +54,10 @@ module "kubernetes_resources" {
   source           = "./modules/kubernetes_resources"
   project_id       = var.project_id
   region           = var.region
+  image_tag        = var.image_tag
   cluster_name     = module.gke.cluster_name
   cluster_endpoint = module.gke.cluster_endpoint
-  image_tag        = var.image_tag
-
-  depends_on = [module.gke]
+  depends_on       = [module.gke]
 }
 
 resource "google_project_service" "services" {
@@ -65,4 +70,15 @@ resource "google_project_service" "services" {
   service = each.key
 
   disable_on_destroy = false
+}
+
+resource "null_resource" "check_gke_plugin" {
+  provisioner "local-exec" {
+    command = <<EOT
+      if ! command -v gke-gcloud-auth-plugin &> /dev/null; then
+        echo "Error: gke-gcloud-auth-plugin not found. Please install it before applying Terraform."
+        exit 1
+      fi
+    EOT
+  }
 }
