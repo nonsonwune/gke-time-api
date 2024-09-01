@@ -1,5 +1,5 @@
 variable "project_id" {
-  description = "The ID of the GCP project"
+  description = "The GCP project ID"
   type        = string
 }
 
@@ -8,17 +8,17 @@ variable "region" {
   type        = string
 }
 
-variable "cluster_name" {
-  description = "The name of the GKE cluster"
+variable "vpc_name" {
+  description = "The name of the VPC"
   type        = string
 }
 
-variable "cluster_endpoint" {
-  description = "The endpoint of the GKE cluster"
+variable "subnet_name" {
+  description = "The name of the subnet"
   type        = string
 }
 
 variable "image_tag" {
-  description = "The tag of the Docker image to deploy"
+  description = "The image tag for the application"
   type        = string
 }

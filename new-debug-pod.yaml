@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: debug-pod
+  name: new-debug-pod
   namespace: time-api
 spec:
   containers:
     - name: debug-container
       image: nicolaka/netshoot
-      command: ["/bin/sh"]
+      command: ["/bin/bash"]
       args: ["-c", "while true; do sleep 30; done;"]

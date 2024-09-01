@@ -1,15 +1,34 @@
-# modules/gke/main.tf
-
-data "google_container_cluster" "time_api_cluster" {
+resource "google_container_cluster" "time_api_cluster" {
   name     = "time-api-gke-cluster"
   location = "${var.region}-a"
   project  = var.project_id
+
+  remove_default_node_pool = true
+  initial_node_count       = 1
+
+  network    = var.vpc_name
+  subnetwork = var.subnet_name
+
+  ip_allocation_policy {
+    cluster_secondary_range_name  = "pods"
+    services_secondary_range_name = "services"
+  }
+
+  release_channel {
+    channel = "REGULAR"
+  }
+
+  addons_config {
+    dns_cache_config {
+      enabled = true
+    }
+  }
 }
 
 resource "google_container_node_pool" "time_api_nodes" {
   name       = "time-api-node-pool"
   location   = "${var.region}-a"
-  cluster    = data.google_container_cluster.time_api_cluster.name
+  cluster    = google_container_cluster.time_api_cluster.name
   node_count = var.gke_num_nodes
 
   node_config {

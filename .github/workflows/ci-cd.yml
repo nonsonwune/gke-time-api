@@ -11,7 +11,7 @@ env:
   IMAGE: time-api
 
 jobs:
-  setup:
+  setup-and-verify:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -26,6 +26,25 @@ jobs:
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ env.PROJECT_ID }}
+
+      - name: Verify Service Account Permissions
+        run: |
+          SA_EMAIL="terraform@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
+          echo "Verifying roles for service account: $SA_EMAIL"
+
+          ROLES=$(gcloud projects get-iam-policy ${{ env.PROJECT_ID }} \
+            --flatten="bindings[].members" \
+            --format="value(bindings.role)" \
+            --filter="bindings.members:serviceAccount:$SA_EMAIL")
+
+          REQUIRED_ROLES=("roles/container.admin" "roles/iam.serviceAccountUser")
+          for ROLE in "${REQUIRED_ROLES[@]}"; do
+            if ! echo "$ROLES" | grep -q "$ROLE"; then
+              echo "Error: Service account is missing required role: $ROLE"
+              exit 1
+            fi
+          done
+          echo "Service account has all required roles"
 
       - name: Create GCS bucket if not exists
         run: |
@@ -56,7 +75,7 @@ jobs:
             --role="roles/storage.objectAdmin"
 
   deploy:
-    needs: setup
+    needs: setup-and-verify
     runs-on: ubuntu-latest
 
     steps:

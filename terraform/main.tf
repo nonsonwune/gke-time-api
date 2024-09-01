@@ -1,50 +1,65 @@
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 6.0"
+resource "google_container_cluster" "primary" {
+  name     = "time-api-gke-cluster"
+  location = var.region
+
+  remove_default_node_pool = true
+  initial_node_count       = 1
+
+  network    = google_compute_network.vpc.name
+  subnetwork = google_compute_subnetwork.subnet.name
+}
+
+resource "google_container_node_pool" "primary_nodes" {
+  name       = "time-api-node-pool"
+  location   = var.region
+  cluster    = google_container_cluster.primary.name
+  node_count = var.gke_num_nodes
+
+  node_config {
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/logging.write",
+      "https://www.googleapis.com/auth/monitoring",
+    ]
+
+    labels = {
+      env = var.project_id
     }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.10"
+
+    machine_type = "n1-standard-1"
+    tags         = ["gke-node", "${var.project_id}-gke"]
+    metadata = {
+      disable-legacy-endpoints = "true"
     }
-    kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = ">= 1.7.0"
-    }
-  }
-  backend "gcs" {
-    bucket = "time-api-gke-project-434215-tfstate"
-    prefix = "terraform/state"
   }
 }
 
-provider "google" {
-  project = var.project_id
-  region  = var.region
+resource "google_compute_network" "vpc" {
+  name                    = "${var.project_id}-vpc"
+  auto_create_subnetworks = "false"
 }
 
-data "google_client_config" "default" {}
-
-data "google_compute_network" "existing_vpc" {
-  name    = "time-api-vpc"
-  project = var.project_id
+resource "google_compute_subnetwork" "subnet" {
+  name          = "${var.project_id}-subnet"
+  region        = var.region
+  network       = google_compute_network.vpc.name
+  ip_cidr_range = "10.10.0.0/24"
 }
 
 module "networking" {
   source     = "./modules/networking"
   project_id = var.project_id
   region     = var.region
-  vpc_name   = data.google_compute_network.existing_vpc.name
+  vpc_name   = google_compute_network.vpc.name
 }
 
-module "gke" {
-  source        = "./modules/gke"
-  project_id    = var.project_id
-  region        = var.region
-  vpc_name      = data.google_compute_network.existing_vpc.name
-  subnet_name   = module.networking.subnet_name
-  gke_num_nodes = var.gke_num_nodes
+module "kubernetes_resources" {
+  source      = "./modules/kubernetes_resources"
+  project_id  = var.project_id
+  region      = var.region
+  image_tag   = var.image_tag
+  vpc_name    = google_compute_network.vpc.name
+  subnet_name = google_compute_subnetwork.subnet.name
+  depends_on  = [google_container_cluster.primary]
 }
 
 resource "google_project_service" "services" {
@@ -59,13 +74,14 @@ resource "google_project_service" "services" {
   disable_on_destroy = false
 }
 
-resource "null_resource" "check_gke_plugin" {
+resource "null_resource" "configure_kubectl" {
+  depends_on = [google_container_cluster.primary]
+
   provisioner "local-exec" {
     command = <<EOT
-      if ! command -v gke-gcloud-auth-plugin &> /dev/null; then
-        echo "Error: gke-gcloud-auth-plugin not found. Please install it before applying Terraform."
-        exit 1
-      fi
+      gcloud container clusters get-credentials ${google_container_cluster.primary.name} \
+        --region ${var.region} \
+        --project ${var.project_id}
     EOT
   }
 }

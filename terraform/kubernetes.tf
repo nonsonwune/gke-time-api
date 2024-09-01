@@ -1,21 +1,26 @@
-provider "kubernetes" {
-  host                   = "https://${module.gke.cluster_endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(module.gke.cluster_ca_certificate)
+resource "null_resource" "kubernetes_config" {
+  provisioner "local-exec" {
+    command = <<EOT
+      gcloud container clusters get-credentials ${google_container_cluster.primary.name} --region ${var.region} --project ${var.project_id}
+      kubectl get nodes
+    EOT
+  }
+
+  depends_on = [google_container_cluster.primary]
 }
 
-provider "kubectl" {
-  host                   = "https://${module.gke.cluster_endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(module.gke.cluster_ca_certificate)
-  load_config_file       = false
-}
+resource "null_resource" "debug_info" {
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "Debug information:"
+      echo "GKE Cluster Endpoint: ${google_container_cluster.primary.endpoint}"
+      echo "Kubernetes Host: https://${google_container_cluster.primary.endpoint}"
+      echo "Current kubeconfig:"
+      kubectl config view
+      echo "Current GCP configuration:"
+      gcloud config list
+    EOT
+  }
 
-module "kubernetes_resources" {
-  source           = "./modules/kubernetes_resources"
-  project_id       = var.project_id
-  region           = var.region
-  image_tag        = var.image_tag
-  cluster_name     = module.gke.cluster_name
-  cluster_endpoint = module.gke.cluster_endpoint
+  depends_on = [google_container_cluster.primary, module.kubernetes_resources, null_resource.kubernetes_config]
 }
