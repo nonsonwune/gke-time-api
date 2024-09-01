@@ -20,6 +20,7 @@ spec:
       app: time-api
   policyTypes:
     - Ingress
+    - Egress
   ingress:
     - from:
         - ipBlock:
@@ -31,6 +32,3 @@ spec:
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
-      ports:
-        - protocol: TCP
-          port: 443

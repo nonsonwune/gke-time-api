@@ -161,7 +161,16 @@ resource "null_resource" "kubernetes_network_policy" {
   provisioner "local-exec" {
     command = <<EOT
       gcloud container clusters get-credentials ${var.cluster_name} --zone ${var.region}-a --project ${var.project_id}
-      kubectl apply -f ${path.module}/network_policy.yaml --validate=false
+      for i in {1..5}; do
+        if kubectl apply -f ${path.module}/network_policy.yaml --validate=false; then
+          echo "Network policy applied successfully"
+          exit 0
+        fi
+        echo "Failed to apply network policy, retrying in 10 seconds..."
+        sleep 10
+      done
+      echo "Failed to apply network policy after 5 attempts"
+      exit 1
     EOT
   }
 }
