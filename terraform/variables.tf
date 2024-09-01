@@ -3,10 +3,10 @@ variable "project_id" {
   type        = string
 }
 
-variable "region" {
-  description = "The region to deploy resources"
+variable "zone" {
+  description = "The zone to deploy resources"
   type        = string
-  default     = "us-central1"
+  default     = "us-central1-a"
 }
 
 variable "gke_num_nodes" {

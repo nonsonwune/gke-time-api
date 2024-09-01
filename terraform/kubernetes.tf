@@ -1,7 +1,7 @@
 resource "null_resource" "kubernetes_config" {
   provisioner "local-exec" {
     command = <<EOT
-      gcloud container clusters get-credentials ${google_container_cluster.primary.name} --region ${var.region} --project ${var.project_id}
+      gcloud container clusters get-credentials ${google_container_cluster.primary.name} --zone ${var.zone} --project ${var.project_id}
       kubectl get nodes
     EOT
   }

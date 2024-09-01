@@ -2,6 +2,7 @@ resource "kubernetes_namespace" "time_api" {
   metadata {
     name = "time-api"
   }
+  depends_on = [var.cluster_endpoint]
 }
 
 resource "kubernetes_deployment" "time_api" {
@@ -38,6 +39,7 @@ resource "kubernetes_deployment" "time_api" {
       }
     }
   }
+  depends_on = [kubernetes_namespace.time_api, var.cluster_endpoint]
 }
 
 resource "kubernetes_service" "time_api" {
@@ -58,4 +60,5 @@ resource "kubernetes_service" "time_api" {
 
     type = "LoadBalancer"
   }
+  depends_on = [kubernetes_deployment.time_api, var.cluster_endpoint]
 }

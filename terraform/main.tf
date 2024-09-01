@@ -1,6 +1,6 @@
 resource "google_container_cluster" "primary" {
   name     = "time-api-gke-cluster"
-  location = var.region
+  location = var.zone
 
   remove_default_node_pool = true
   initial_node_count       = 1
@@ -11,7 +11,7 @@ resource "google_container_cluster" "primary" {
 
 resource "google_container_node_pool" "primary_nodes" {
   name       = "time-api-node-pool"
-  location   = var.region
+  location   = var.zone
   cluster    = google_container_cluster.primary.name
   node_count = var.gke_num_nodes
 
@@ -25,7 +25,7 @@ resource "google_container_node_pool" "primary_nodes" {
       env = var.project_id
     }
 
-    machine_type = "n1-standard-1"
+    machine_type = "e2-standard-2"
     tags         = ["gke-node", "${var.project_id}-gke"]
     metadata = {
       disable-legacy-endpoints = "true"
@@ -36,14 +36,14 @@ resource "google_container_node_pool" "primary_nodes" {
 module "networking" {
   source     = "./modules/networking"
   project_id = var.project_id
-  region     = var.region
+  zone       = var.zone
   vpc_name   = "${var.project_id}-vpc"
 }
 
 module "kubernetes_resources" {
   source           = "./modules/kubernetes_resources"
   project_id       = var.project_id
-  region           = var.region
+  zone             = var.zone
   image_tag        = var.image_tag
   vpc_name         = module.networking.vpc_name
   subnet_name      = module.networking.subnet_name
@@ -63,14 +63,15 @@ resource "google_project_service" "services" {
   disable_on_destroy = false
 }
 
-resource "null_resource" "configure_kubectl" {
-  depends_on = [google_container_cluster.primary]
+resource "null_resource" "kubectl_config" {
+  depends_on = [google_container_cluster.primary, google_container_node_pool.primary_nodes]
 
   provisioner "local-exec" {
     command = <<EOT
       gcloud container clusters get-credentials ${google_container_cluster.primary.name} \
-        --region ${var.region} \
+        --zone ${var.zone} \
         --project ${var.project_id}
+      kubectl cluster-info
     EOT
   }
 }

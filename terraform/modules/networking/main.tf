@@ -6,7 +6,7 @@ resource "google_compute_network" "time_api_vpc" {
 
 resource "google_compute_subnetwork" "time_api_subnet" {
   name          = "time-api-subnet"
-  region        = var.region
+  region        = substr(var.zone, 0, length(var.zone) - 2)
   network       = google_compute_network.time_api_vpc.self_link
   ip_cidr_range = "10.0.0.0/24"
   project       = var.project_id
@@ -14,7 +14,7 @@ resource "google_compute_subnetwork" "time_api_subnet" {
 
 resource "google_compute_router" "time_api_router" {
   name    = "time-api-router"
-  region  = var.region
+  region  = substr(var.zone, 0, length(var.zone) - 2)
   network = google_compute_network.time_api_vpc.self_link
   project = var.project_id
 }
@@ -22,7 +22,7 @@ resource "google_compute_router" "time_api_router" {
 resource "google_compute_router_nat" "time_api_nat" {
   name                               = "time-api-nat"
   router                             = google_compute_router.time_api_router.name
-  region                             = var.region
+  region                             = substr(var.zone, 0, length(var.zone) - 2)
   nat_ip_allocate_option             = "AUTO_ONLY"
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
   project                            = var.project_id
