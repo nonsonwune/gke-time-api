@@ -41,22 +41,29 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+        working-directory: ./terraform
+
+      - name: Terraform Workspace
+        run: |
+          terraform workspace select production || terraform workspace new production
+        working-directory: ./terraform
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan -var="image_tag=$GITHUB_SHA"
+        working-directory: ./terraform
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -var="image_tag=$GITHUB_SHA"
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply -auto-approve tfplan
+        working-directory: ./terraform
 
-      - name: Wait for GKE cluster to be ready
+      - name: Get GKE Credentials
         run: |
           gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
-          kubectl wait --for=condition=Ready nodes --all --timeout=600s
 
-      - name: Apply Kubernetes resources
+      - name: Deploy to GKE
         run: |
-          sed -i 's|gcr.io/time-api-gke-project-434215/time-api:latest|gcr.io/${{ env.PROJECT_ID }}/time-api:${{ github.sha }}|' k8s-resources.yaml
-          kubectl apply -f k8s-resources.yaml
-
-      - name: Wait for deployment
-        run: |
+          kubectl set image deployment/time-api time-api=gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA -n time-api
           kubectl rollout status deployment/time-api -n time-api --timeout=300s
 
       - name: Test API

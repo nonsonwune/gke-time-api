@@ -1,10 +1,8 @@
-# VPC
 resource "google_compute_network" "time_api_vpc" {
   name                    = "time-api-vpc"
   auto_create_subnetworks = false
 }
 
-# Subnet
 resource "google_compute_subnetwork" "time_api_subnet" {
   name          = "time-api-subnet"
   region        = var.region
@@ -12,14 +10,12 @@ resource "google_compute_subnetwork" "time_api_subnet" {
   ip_cidr_range = "10.0.0.0/24"
 }
 
-# NAT Router
 resource "google_compute_router" "time_api_router" {
   name    = "time-api-router"
   region  = var.region
   network = google_compute_network.time_api_vpc.name
 }
 
-# NAT Gateway
 resource "google_compute_router_nat" "time_api_nat" {
   name                               = "time-api-nat"
   router                             = google_compute_router.time_api_router.name
@@ -28,7 +24,6 @@ resource "google_compute_router_nat" "time_api_nat" {
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }
 
-# Firewall rule to allow internal communication
 resource "google_compute_firewall" "internal" {
   name    = "time-api-allow-internal"
   network = google_compute_network.time_api_vpc.name
@@ -50,7 +45,6 @@ resource "google_compute_firewall" "internal" {
   source_ranges = ["10.0.0.0/24"]
 }
 
-# Firewall rule to allow HTTP/HTTPS traffic
 resource "google_compute_firewall" "http" {
   name    = "time-api-allow-http"
   network = google_compute_network.time_api_vpc.name
@@ -62,4 +56,12 @@ resource "google_compute_firewall" "http" {
 
   source_ranges = ["0.0.0.0/0"]
   target_tags   = ["gke-node", "time-api-gke"]
+}
+
+output "vpc_name" {
+  value = google_compute_network.time_api_vpc.name
+}
+
+output "subnet_name" {
+  value = google_compute_subnetwork.time_api_subnet.name
 }

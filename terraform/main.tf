@@ -4,56 +4,49 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 6.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.10"
+    }
   }
 }
 
 provider "google" {
-  project     = var.project_id
-  region      = var.region
-  credentials = file("terraform-sa-key.json")
+  project = var.project_id
+  region  = var.region
 }
 
-resource "google_container_cluster" "time_api_cluster" {
-  name     = "time-api-gke-cluster"
-  location = "${var.region}-a"
-
-  remove_default_node_pool = true
-  initial_node_count       = 1
-
-  network    = google_compute_network.time_api_vpc.name
-  subnetwork = google_compute_subnetwork.time_api_subnet.name
-
-  workload_identity_config {
-    workload_pool = "${var.project_id}.svc.id.goog"
+provider "kubernetes" {
+  host                   = module.gke.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.gke.cluster_ca_certificate)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "gke-gcloud-auth-plugin"
   }
-
-  network_policy {
-    enabled = true
-  }
-
-  enable_intranode_visibility = true
 }
 
-resource "google_container_node_pool" "time_api_nodes" {
-  name       = "time-api-node-pool"
-  location   = "${var.region}-a"
-  cluster    = google_container_cluster.time_api_cluster.name
-  node_count = var.gke_num_nodes
+module "networking" {
+  source     = "./modules/networking"
+  project_id = var.project_id
+  region     = var.region
+}
 
-  node_config {
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/logging.write",
-      "https://www.googleapis.com/auth/monitoring",
-    ]
+module "gke" {
+  source        = "./modules/gke"
+  project_id    = var.project_id
+  region        = var.region
+  vpc_name      = module.networking.vpc_name
+  subnet_name   = module.networking.subnet_name
+  gke_num_nodes = var.gke_num_nodes
+}
 
-    labels = {
-      env = "time-api-production"
-    }
+module "kubernetes_resources" {
+  source           = "./modules/kubernetes_resources"
+  project_id       = var.project_id
+  region           = var.region
+  cluster_name     = module.gke.cluster_name
+  cluster_endpoint = module.gke.cluster_endpoint
+  image_tag        = var.image_tag
 
-    machine_type = "e2-standard-2"
-    tags         = ["gke-node", "time-api-gke"]
-    metadata = {
-      disable-legacy-endpoints = "true"
-    }
-  }
+  depends_on = [module.gke]
 }

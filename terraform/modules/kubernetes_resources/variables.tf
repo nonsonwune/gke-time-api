@@ -6,13 +6,16 @@ variable "project_id" {
 variable "region" {
   description = "The region to deploy resources"
   type        = string
-  default     = "us-central1"
 }
 
-variable "gke_num_nodes" {
-  description = "Number of nodes in the GKE cluster"
-  type        = number
-  default     = 2
+variable "cluster_name" {
+  description = "The name of the GKE cluster"
+  type        = string
+}
+
+variable "cluster_endpoint" {
+  description = "The endpoint of the GKE cluster"
+  type        = string
 }
 
 variable "image_tag" {
