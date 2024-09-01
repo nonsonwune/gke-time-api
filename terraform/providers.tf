@@ -8,10 +8,6 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.10"
     }
-    kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = ">= 1.7.0"
-    }
   }
   backend "gcs" {
     bucket = "time-api-gke-project-434215-tfstate"
@@ -26,19 +22,15 @@ provider "google" {
 
 data "google_client_config" "default" {}
 
-provider "kubernetes" {
-  host  = "https://${google_container_cluster.primary.endpoint}"
-  token = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(
-    google_container_cluster.primary.master_auth[0].cluster_ca_certificate
-  )
+data "google_container_cluster" "my_cluster" {
+  name     = "time-api-gke-cluster"
+  location = var.region
 }
 
-provider "kubectl" {
-  host  = "https://${google_container_cluster.primary.endpoint}"
+provider "kubernetes" {
+  host  = "https://${data.google_container_cluster.my_cluster.endpoint}"
   token = data.google_client_config.default.access_token
   cluster_ca_certificate = base64decode(
-    google_container_cluster.primary.master_auth[0].cluster_ca_certificate
+    data.google_container_cluster.my_cluster.master_auth[0].cluster_ca_certificate
   )
-  load_config_file = false
 }

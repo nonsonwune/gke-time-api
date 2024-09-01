@@ -5,8 +5,8 @@ resource "google_container_cluster" "primary" {
   remove_default_node_pool = true
   initial_node_count       = 1
 
-  network    = google_compute_network.vpc.name
-  subnetwork = google_compute_subnetwork.subnet.name
+  network    = module.networking.vpc_name
+  subnetwork = module.networking.subnet_name
 }
 
 resource "google_container_node_pool" "primary_nodes" {
@@ -33,33 +33,22 @@ resource "google_container_node_pool" "primary_nodes" {
   }
 }
 
-resource "google_compute_network" "vpc" {
-  name                    = "${var.project_id}-vpc"
-  auto_create_subnetworks = "false"
-}
-
-resource "google_compute_subnetwork" "subnet" {
-  name          = "${var.project_id}-subnet"
-  region        = var.region
-  network       = google_compute_network.vpc.name
-  ip_cidr_range = "10.10.0.0/24"
-}
-
 module "networking" {
   source     = "./modules/networking"
   project_id = var.project_id
   region     = var.region
-  vpc_name   = google_compute_network.vpc.name
+  vpc_name   = "${var.project_id}-vpc"
 }
 
 module "kubernetes_resources" {
-  source      = "./modules/kubernetes_resources"
-  project_id  = var.project_id
-  region      = var.region
-  image_tag   = var.image_tag
-  vpc_name    = google_compute_network.vpc.name
-  subnet_name = google_compute_subnetwork.subnet.name
-  depends_on  = [google_container_cluster.primary]
+  source           = "./modules/kubernetes_resources"
+  project_id       = var.project_id
+  region           = var.region
+  image_tag        = var.image_tag
+  vpc_name         = module.networking.vpc_name
+  subnet_name      = module.networking.subnet_name
+  cluster_endpoint = google_container_cluster.primary.endpoint
+  depends_on       = [google_container_cluster.primary, google_container_node_pool.primary_nodes]
 }
 
 resource "google_project_service" "services" {

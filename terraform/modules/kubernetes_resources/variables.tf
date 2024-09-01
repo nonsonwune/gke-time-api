@@ -22,3 +22,8 @@ variable "image_tag" {
   description = "The image tag for the application"
   type        = string
 }
+
+variable "cluster_endpoint" {
+  description = "The cluster endpoint"
+  type        = string
+}
