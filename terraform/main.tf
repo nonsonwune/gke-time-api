@@ -24,8 +24,6 @@ provider "google" {
   region  = var.region
 }
 
-data "google_client_config" "default" {}
-
 data "google_compute_network" "existing_vpc" {
   name    = "time-api-vpc"
   project = var.project_id
