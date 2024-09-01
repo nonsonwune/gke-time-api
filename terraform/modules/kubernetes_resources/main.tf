@@ -1,5 +1,3 @@
-# modules/kubernetes_resources/main.tf
-
 terraform {
   required_providers {
     kubernetes = {
@@ -11,12 +9,6 @@ terraform {
       version = ">= 1.7.0"
     }
   }
-}
-
-data "google_container_cluster" "gke_cluster" {
-  name     = var.cluster_name
-  location = var.region
-  project  = var.project_id
 }
 
 resource "kubernetes_namespace" "time_api" {
