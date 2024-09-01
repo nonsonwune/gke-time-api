@@ -13,18 +13,15 @@ terraform {
       version = ">= 1.7.0"
     }
   }
+  backend "gcs" {
+    bucket = "time-api-gke-project-434215-tfstate"
+    prefix = "terraform/state"
+  }
 }
 
 provider "google" {
   project = var.project_id
   region  = var.region
-}
-
-
-provider "kubernetes" {
-  host                   = "https://${module.gke.cluster_endpoint}"
-  cluster_ca_certificate = base64decode(module.gke.cluster_ca_certificate)
-  token                  = data.google_client_config.default.access_token
 }
 
 data "google_client_config" "default" {}
@@ -48,16 +45,6 @@ module "gke" {
   vpc_name      = data.google_compute_network.existing_vpc.name
   subnet_name   = module.networking.subnet_name
   gke_num_nodes = var.gke_num_nodes
-}
-
-module "kubernetes_resources" {
-  source           = "./modules/kubernetes_resources"
-  project_id       = var.project_id
-  region           = var.region
-  image_tag        = var.image_tag
-  cluster_name     = module.gke.cluster_name
-  cluster_endpoint = module.gke.cluster_endpoint
-  depends_on       = [module.gke]
 }
 
 resource "google_project_service" "services" {

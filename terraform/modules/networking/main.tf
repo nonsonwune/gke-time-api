@@ -5,11 +5,10 @@ data "google_compute_network" "time_api_vpc" {
   project = var.project_id
 }
 
-resource "google_compute_subnetwork" "time_api_subnet" {
-  name          = "time-api-subnet"
-  region        = var.region
-  network       = data.google_compute_network.time_api_vpc.self_link
-  ip_cidr_range = "10.0.0.0/24"
+data "google_compute_subnetwork" "time_api_subnet" {
+  name    = "time-api-subnet"
+  region  = var.region
+  project = var.project_id
 }
 
 resource "google_compute_router" "time_api_router" {
@@ -44,7 +43,7 @@ resource "google_compute_firewall" "internal" {
     ports    = ["0-65535"]
   }
 
-  source_ranges = ["10.0.0.0/24"]
+  source_ranges = [data.google_compute_subnetwork.time_api_subnet.ip_cidr_range]
 }
 
 resource "google_compute_firewall" "http" {
@@ -65,5 +64,5 @@ output "vpc_name" {
 }
 
 output "subnet_name" {
-  value = google_compute_subnetwork.time_api_subnet.name
+  value = data.google_compute_subnetwork.time_api_subnet.name
 }

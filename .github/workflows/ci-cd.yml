@@ -11,7 +11,52 @@ env:
   IMAGE: time-api
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup GCP credentials
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup GCloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Create GCS bucket if not exists
+        run: |
+          if ! gsutil ls gs://${{ env.PROJECT_ID }}-tfstate &>/dev/null; then
+            echo "Creating GCS bucket for Terraform state..."
+            gcloud storage buckets create gs://${{ env.PROJECT_ID }}-tfstate --project=${{ env.PROJECT_ID }} --location=us-central1
+          else
+            echo "GCS bucket already exists."
+          fi
+
+      - name: Setup Terraform Service Account
+        run: |
+          if ! gcloud iam service-accounts describe terraform@${{ env.PROJECT_ID }}.iam.gserviceaccount.com --project=${{ env.PROJECT_ID }} &>/dev/null; then
+            echo "Creating Terraform service account..."
+            gcloud iam service-accounts create terraform --display-name="Terraform Service Account" --project=${{ env.PROJECT_ID }}
+          else
+            echo "Terraform service account already exists."
+          fi
+
+          echo "Granting necessary roles to the service account..."
+          gcloud projects add-iam-policy-binding ${{ env.PROJECT_ID }} \
+            --member="serviceAccount:terraform@${{ env.PROJECT_ID }}.iam.gserviceaccount.com" \
+            --role="roles/editor"
+
+          echo "Granting bucket permissions..."
+          gcloud storage buckets add-iam-policy-binding gs://${{ env.PROJECT_ID }}-tfstate \
+            --member="serviceAccount:terraform@${{ env.PROJECT_ID }}.iam.gserviceaccount.com" \
+            --role="roles/storage.objectAdmin"
+
   deploy:
+    needs: setup
     runs-on: ubuntu-latest
 
     steps:
@@ -64,10 +109,6 @@ jobs:
       - name: Get GKE Credentials
         run: |
           gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
-
-      - name: Deploy to GKE
-        run: |
-          kubectl rollout status deployment/time-api -n time-api --timeout=300s
 
       - name: Test API
         run: |
