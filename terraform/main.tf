@@ -1,12 +1,10 @@
 resource "google_container_cluster" "primary" {
-  name     = "time-api-gke-cluster"
-  location = var.zone
-
+  name                     = "time-api-gke-cluster"
+  location                 = var.zone
   remove_default_node_pool = true
   initial_node_count       = 1
-
-  network    = module.networking.vpc_name
-  subnetwork = module.networking.subnet_name
+  network                  = module.networking.vpc_name
+  subnetwork               = module.networking.subnet_name
 }
 
 resource "google_container_node_pool" "primary_nodes" {
@@ -49,18 +47,6 @@ module "kubernetes_resources" {
   subnet_name      = module.networking.subnet_name
   cluster_endpoint = google_container_cluster.primary.endpoint
   depends_on       = [google_container_cluster.primary, google_container_node_pool.primary_nodes]
-}
-
-resource "google_project_service" "services" {
-  for_each = toset([
-    "container.googleapis.com",
-    "compute.googleapis.com",
-    "cloudresourcemanager.googleapis.com",
-  ])
-  project = var.project_id
-  service = each.key
-
-  disable_on_destroy = false
 }
 
 resource "null_resource" "kubectl_config" {
