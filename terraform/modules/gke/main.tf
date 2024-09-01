@@ -44,6 +44,14 @@ resource "google_container_cluster" "time_api_cluster" {
       issue_client_certificate = false
     }
   }
+
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [
+      node_config,
+      initial_node_count,
+    ]
+  }
 }
 
 resource "google_container_node_pool" "time_api_nodes" {
