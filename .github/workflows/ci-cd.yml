@@ -27,6 +27,10 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
+      - name: Install gke-gcloud-auth-plugin
+        run: |
+          gcloud components install gke-gcloud-auth-plugin
+
       - name: Verify active service account
         run: gcloud auth list
 
@@ -40,7 +44,7 @@ jobs:
             --format="value(bindings.role)" \
             --filter="bindings.members:serviceAccount:$SA_EMAIL")
 
-          REQUIRED_ROLES=("roles/container.admin" "roles/iam.serviceAccountUser" "roles/artifactregistry.writer")
+          REQUIRED_ROLES=("roles/container.admin" "roles/iam.serviceAccountUser" "roles/artifactregistry.writer" "roles/storage.objectAdmin")
           for ROLE in "${REQUIRED_ROLES[@]}"; do
             if ! echo "$ROLES" | grep -q "$ROLE"; then
               echo "Error: Service account is missing required role: $ROLE"
@@ -62,13 +66,17 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
       - name: Setup GCloud CLI
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ env.PROJECT_ID }}
+
+      - name: Install gke-gcloud-auth-plugin
+        run: |
+          gcloud components install gke-gcloud-auth-plugin
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
       - name: Verify active service account
         run: gcloud auth list
