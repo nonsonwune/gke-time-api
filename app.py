@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 def get_current_time():
     current_time = datetime.datetime.now().isoformat()
     app.logger.info(f"Time requested. Returning: {current_time}")
-    return jsonify({"current_time": current_time, "email": "chuqunonso@gmail.com"})
+    return jsonify({"current_time": current_time})
 
 
 if __name__ == "__main__":
