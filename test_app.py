@@ -24,7 +24,7 @@ class TestApp(unittest.TestCase):
         try:
             datetime.datetime.strptime(data["current_time"], "%Y-%m-%d %H:%M:%S %Z%z")
         except ValueError:
-            self.fail("Time is not in the expected format")
+            self.fail("Time is not in the expected format.")
 
     def test_time_is_current_local(self):
         response = self.client.get("/time")
