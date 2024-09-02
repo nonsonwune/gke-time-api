@@ -1,3 +1,5 @@
+# terraform/variables.tf
+
 variable "project_id" {
   description = "The ID of the GCP project"
   type        = string
@@ -6,13 +8,11 @@ variable "project_id" {
 variable "zone" {
   description = "The zone to deploy resources"
   type        = string
-  default     = "us-central1-a"
 }
 
 variable "gke_num_nodes" {
   description = "Number of nodes in the GKE cluster"
   type        = number
-  default     = 2
 }
 
 variable "image_tag" {

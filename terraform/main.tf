@@ -1,4 +1,4 @@
-# main.tf
+# terraform/main.tf
 
 module "networking" {
   source     = "./modules/networking"
