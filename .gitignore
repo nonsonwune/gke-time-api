@@ -1,7 +1,6 @@
 .terraform/
 *.tfstate
 *.tfstate.backup
-*.tfvars
 
 clau_/
 scripts_/
