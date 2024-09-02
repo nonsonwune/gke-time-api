@@ -17,6 +17,7 @@ The API returns the current time and an email address when accessed via a GET re
 ## Local Setup and Testing
 
 ### Prerequisites
+
 - Google Cloud SDK
 - Terraform
 - kubectl
@@ -26,23 +27,27 @@ The API returns the current time and an email address when accessed via a GET re
 ### Detailed Steps to Run Locally
 
 1. Clone the repository:
+
    ```
    git clone https://github.com/nonsonwune/gke-time-api.git
    cd gke-time-api
    ```
 
 2. Set up Google Cloud credentials:
+
    ```
    gcloud auth application-default login
    ```
 
 3. Set your GCP project ID:
+
    ```
    export PROJECT_ID=time-api-gke-project-434215
    gcloud config set project $PROJECT_ID
    ```
 
 4. Enable necessary GCP APIs:
+
    ```
    gcloud services enable compute.googleapis.com
    gcloud services enable container.googleapis.com
@@ -51,23 +56,27 @@ The API returns the current time and an email address when accessed via a GET re
    ```
 
 5. Initialize Terraform:
+
    ```
    cd terraform
    terraform init
    ```
 
 6. Plan and apply the Terraform configuration:
+
    ```
    terraform plan -out=tfplan
    terraform apply tfplan
    ```
 
 7. Configure kubectl to use the new cluster:
+
    ```
    gcloud container clusters get-credentials time-api-gke-cluster --zone us-central1-a --project $PROJECT_ID
    ```
 
 8. Verify the deployment:
+
    ```
    kubectl get pods -n time-api
    kubectl get services -n time-api
@@ -83,6 +92,7 @@ The API returns the current time and an email address when accessed via a GET re
 To run the unit tests for the API:
 
 1. Install the required packages:
+
    ```
    pip install flask requests
    ```
@@ -95,6 +105,7 @@ To run the unit tests for the API:
 ## CI/CD Pipeline
 
 The project uses GitHub Actions for CI/CD. On each push to the main branch, the pipeline:
+
 1. Builds the Docker image
 2. Pushes it to Google Container Registry
 3. Updates the Terraform configuration
@@ -102,7 +113,7 @@ The project uses GitHub Actions for CI/CD. On each push to the main branch, the 
 5. Verifies that the API is accessible by running a test
 
 The latest successful GitHub Actions workflow run can be found at:
-[https://github.com/nonsonwune/gke-time-api/actions/runs/10665784024](https://github.com/nonsonwune/gke-time-api/actions/runs/10665784024)
+[https://github.com/nonsonwune/gke-time-api/actions/runs/10666348600](https://github.com/nonsonwune/gke-time-api/actions/runs/10666348600)
 
 ## Monitoring and Alerting
 
@@ -131,9 +142,9 @@ This will return the current time and an email address in JSON format.
 To scale the application:
 
 1. Adjust the number of replicas in the Kubernetes deployment:
+
    ```
    kubectl scale deployment time-api -n time-api --replicas=3
    ```
 
 2. To scale the GKE cluster, modify the `gke_num_nodes` variable in `terraform/terraform.tfvars` and reapply the Terraform configuration.
-

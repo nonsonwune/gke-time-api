@@ -12,10 +12,11 @@ nigeria_tz = pytz.timezone("Africa/Lagos")
 @app.route("/time", methods=["GET"])
 def get_current_time():
     current_time = datetime.datetime.now(nigeria_tz)
-    app.logger.info(f"Time requested. Returning: {current_time}")
+    formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S %Z%z")
+    app.logger.info(f"Time requested. Returning: {formatted_time}")
     return jsonify(
         {
-            "current_time": current_time.isoformat(),
+            "current_time": formatted_time,
             "email": "chuqunonso@gmail.com",
             "timezone": str(current_time.tzinfo),
         }

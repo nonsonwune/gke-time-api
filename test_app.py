@@ -22,14 +22,16 @@ class TestApp(unittest.TestCase):
         self.assertEqual(data["email"], "chuqunonso@gmail.com")
         self.assertEqual(data["timezone"], "Africa/Lagos")
         try:
-            datetime.datetime.fromisoformat(data["current_time"])
+            datetime.datetime.strptime(data["current_time"], "%Y-%m-%d %H:%M:%S %Z%z")
         except ValueError:
-            self.fail("Time is not in ISO format")
+            self.fail("Time is not in the expected format")
 
     def test_time_is_current_local(self):
         response = self.client.get("/time")
         data = json.loads(response.data)
-        returned_time = datetime.datetime.fromisoformat(data["current_time"])
+        returned_time = datetime.datetime.strptime(
+            data["current_time"], "%Y-%m-%d %H:%M:%S %Z%z"
+        )
         current_time = datetime.datetime.now(self.nigeria_tz)
         time_difference = abs(current_time - returned_time)
         self.assertLess(
@@ -46,14 +48,16 @@ class TestApp(unittest.TestCase):
         self.assertEqual(data["email"], "chuqunonso@gmail.com")
         self.assertEqual(data["timezone"], "Africa/Lagos")
         try:
-            datetime.datetime.fromisoformat(data["current_time"])
+            datetime.datetime.strptime(data["current_time"], "%Y-%m-%d %H:%M:%S %Z%z")
         except ValueError:
-            self.fail("Time is not in ISO format")
+            self.fail("Time is not in the expected format")
 
     def test_time_is_current_deployed(self):
         response = requests.get(self.api_url)
         data = response.json()
-        returned_time = datetime.datetime.fromisoformat(data["current_time"])
+        returned_time = datetime.datetime.strptime(
+            data["current_time"], "%Y-%m-%d %H:%M:%S %Z%z"
+        )
         current_time = datetime.datetime.now(self.nigeria_tz)
         time_difference = abs(current_time - returned_time)
         self.assertLess(
