@@ -3,12 +3,14 @@ import json
 import datetime
 import requests
 from app import app
+import pytz
 
 
 class TestApp(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
         self.api_url = "http://34.69.20.46/time"
+        self.nigeria_tz = pytz.timezone("Africa/Lagos")
 
     def test_get_time_local(self):
         response = self.client.get("/time")
@@ -26,9 +28,13 @@ class TestApp(unittest.TestCase):
         response = self.client.get("/time")
         data = json.loads(response.data)
         returned_time = datetime.datetime.fromisoformat(data["current_time"])
-        current_time = datetime.datetime.now()
-        time_difference = current_time - returned_time
-        self.assertLess(time_difference.total_seconds(), 1)
+        current_time = datetime.datetime.now(self.nigeria_tz)
+        time_difference = abs(
+            current_time - returned_time.replace(tzinfo=self.nigeria_tz)
+        )
+        self.assertLess(
+            time_difference.total_seconds(), 5
+        )  # Allow up to 5 seconds difference
 
     def test_get_time_deployed(self):
         response = requests.get(self.api_url)
@@ -46,11 +52,13 @@ class TestApp(unittest.TestCase):
         response = requests.get(self.api_url)
         data = response.json()
         returned_time = datetime.datetime.fromisoformat(data["current_time"])
-        current_time = datetime.datetime.now()
-        time_difference = current_time - returned_time
+        current_time = datetime.datetime.now(self.nigeria_tz)
+        time_difference = abs(
+            current_time - returned_time.replace(tzinfo=self.nigeria_tz)
+        )
         self.assertLess(
-            time_difference.total_seconds(), 60
-        )  # Allow up to 1 minute difference
+            time_difference.total_seconds(), 5
+        )  # Allow up to 5 seconds difference
 
     def test_api_accessibility(self):
         response = requests.get(self.api_url)
