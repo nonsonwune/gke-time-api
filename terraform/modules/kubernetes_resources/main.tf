@@ -1,8 +1,9 @@
+# modules/kubernetes_resources/main.tf
+
 resource "kubernetes_namespace" "time_api" {
   metadata {
     name = "time-api"
   }
-  depends_on = [var.cluster_endpoint]
 }
 
 resource "kubernetes_deployment" "time_api" {
@@ -38,22 +39,13 @@ resource "kubernetes_deployment" "time_api" {
 
           resources {
             limits = {
-              cpu    = "500m"
+              cpu    = "0.5"
               memory = "512Mi"
             }
             requests = {
               cpu    = "250m"
-              memory = "256Mi"
+              memory = "50Mi"
             }
-          }
-
-          readiness_probe {
-            http_get {
-              path = "/time"
-              port = 8080
-            }
-            initial_delay_seconds = 10
-            period_seconds        = 5
           }
 
           liveness_probe {
@@ -61,14 +53,14 @@ resource "kubernetes_deployment" "time_api" {
               path = "/time"
               port = 8080
             }
-            initial_delay_seconds = 15
-            period_seconds        = 10
+
+            initial_delay_seconds = 3
+            period_seconds        = 3
           }
         }
       }
     }
   }
-  depends_on = [kubernetes_namespace.time_api]
 }
 
 resource "kubernetes_service" "time_api" {
@@ -76,12 +68,10 @@ resource "kubernetes_service" "time_api" {
     name      = "time-api"
     namespace = kubernetes_namespace.time_api.metadata[0].name
   }
-
   spec {
     selector = {
-      app = "time-api"
+      app = kubernetes_deployment.time_api.spec[0].template[0].metadata[0].labels.app
     }
-
     port {
       port        = 80
       target_port = 8080
@@ -89,34 +79,4 @@ resource "kubernetes_service" "time_api" {
 
     type = "LoadBalancer"
   }
-  depends_on = [kubernetes_deployment.time_api]
-}
-
-resource "kubernetes_network_policy" "time_api" {
-  metadata {
-    name      = "time-api-network-policy"
-    namespace = kubernetes_namespace.time_api.metadata[0].name
-  }
-
-  spec {
-    pod_selector {
-      match_labels = {
-        app = "time-api"
-      }
-    }
-
-    ingress {
-      from {
-        ip_block {
-          cidr = "0.0.0.0/0"
-        }
-      }
-    }
-
-    egress {}
-
-    policy_types = ["Ingress", "Egress"]
-  }
-
-  depends_on = [kubernetes_namespace.time_api]
 }

@@ -1,3 +1,5 @@
+# modules/networking/main.tf
+
 resource "google_compute_network" "time_api_vpc" {
   name                    = var.vpc_name
   auto_create_subnetworks = false
@@ -10,6 +12,16 @@ resource "google_compute_subnetwork" "time_api_subnet" {
   network       = google_compute_network.time_api_vpc.self_link
   ip_cidr_range = "10.0.0.0/24"
   project       = var.project_id
+
+  secondary_ip_range {
+    range_name    = "gke-time-api-gke-cluster-pods-6a4f6ce0"
+    ip_cidr_range = "10.168.0.0/14"
+  }
+
+  secondary_ip_range {
+    range_name    = "gke-time-api-gke-cluster-services"
+    ip_cidr_range = "10.2.0.0/20"
+  }
 }
 
 resource "google_compute_router" "time_api_router" {

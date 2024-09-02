@@ -1,3 +1,5 @@
+# modules/gke/main.tf
+
 resource "google_container_cluster" "time_api_cluster" {
   name     = "time-api-gke-cluster"
   location = "${var.region}-a"
@@ -10,8 +12,8 @@ resource "google_container_cluster" "time_api_cluster" {
   subnetwork = var.subnet_name
 
   ip_allocation_policy {
-    cluster_secondary_range_name  = "pods"
-    services_secondary_range_name = "services"
+    cluster_secondary_range_name  = "gke-time-api-gke-cluster-pods-6a4f6ce0"
+    services_secondary_range_name = "gke-time-api-gke-cluster-services"
   }
 
   release_channel {
@@ -45,34 +47,5 @@ resource "google_container_node_pool" "time_api_nodes" {
     metadata = {
       disable-legacy-endpoints = "true"
     }
-  }
-}
-
-resource "google_compute_security_policy" "policy" {
-  name    = "time-api-security-policy"
-  project = var.project_id
-
-  rule {
-    action   = "allow"
-    priority = "2147483647"
-    match {
-      versioned_expr = "SRC_IPS_V1"
-      config {
-        src_ip_ranges = ["*"]
-      }
-    }
-    description = "Default rule, higher priority overrides it"
-  }
-
-  rule {
-    action   = "allow"
-    priority = "1000"
-    match {
-      versioned_expr = "SRC_IPS_V1"
-      config {
-        src_ip_ranges = ["0.0.0.0/0"]
-      }
-    }
-    description = "Allow all traffic"
   }
 }

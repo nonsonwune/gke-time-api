@@ -27,3 +27,8 @@ variable "cluster_endpoint" {
   description = "The cluster endpoint"
   type        = string
 }
+
+variable "cluster_ca_certificate" {
+  description = "The cluster CA certificate"
+  type        = string
+}
