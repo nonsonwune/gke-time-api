@@ -70,3 +70,21 @@ spec:
     - {}
   egress:
     - {}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: time-api-ingress
+  namespace: time-api
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: time-api
+                port:
+                  number: 80
