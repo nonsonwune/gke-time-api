@@ -18,7 +18,9 @@ class TestApp(unittest.TestCase):
         data = json.loads(response.data)
         self.assertIn("current_time", data)
         self.assertIn("email", data)
+        self.assertIn("timezone", data)
         self.assertEqual(data["email"], "chuqunonso@gmail.com")
+        self.assertEqual(data["timezone"], "Africa/Lagos")
         try:
             datetime.datetime.fromisoformat(data["current_time"])
         except ValueError:
@@ -29,9 +31,7 @@ class TestApp(unittest.TestCase):
         data = json.loads(response.data)
         returned_time = datetime.datetime.fromisoformat(data["current_time"])
         current_time = datetime.datetime.now(self.nigeria_tz)
-        time_difference = abs(
-            current_time - returned_time.replace(tzinfo=self.nigeria_tz)
-        )
+        time_difference = abs(current_time - returned_time)
         self.assertLess(
             time_difference.total_seconds(), 5
         )  # Allow up to 5 seconds difference
@@ -42,7 +42,9 @@ class TestApp(unittest.TestCase):
         data = response.json()
         self.assertIn("current_time", data)
         self.assertIn("email", data)
+        self.assertIn("timezone", data)
         self.assertEqual(data["email"], "chuqunonso@gmail.com")
+        self.assertEqual(data["timezone"], "Africa/Lagos")
         try:
             datetime.datetime.fromisoformat(data["current_time"])
         except ValueError:
@@ -53,12 +55,10 @@ class TestApp(unittest.TestCase):
         data = response.json()
         returned_time = datetime.datetime.fromisoformat(data["current_time"])
         current_time = datetime.datetime.now(self.nigeria_tz)
-        time_difference = abs(
-            current_time - returned_time.replace(tzinfo=self.nigeria_tz)
-        )
+        time_difference = abs(current_time - returned_time)
         self.assertLess(
-            time_difference.total_seconds(), 5
-        )  # Allow up to 5 seconds difference
+            time_difference.total_seconds(), 60
+        )  # Allow up to 60 seconds difference for network latency
 
     def test_api_accessibility(self):
         response = requests.get(self.api_url)
