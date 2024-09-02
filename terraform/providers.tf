@@ -18,8 +18,9 @@ terraform {
 }
 
 provider "google" {
-  project = var.project_id
-  zone    = var.zone
+  project     = var.project_id
+  zone        = var.zone
+  credentials = file("./key.json")
 }
 
 data "google_client_config" "default" {}

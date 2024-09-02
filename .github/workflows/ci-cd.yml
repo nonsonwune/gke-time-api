@@ -27,9 +27,12 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
+      - name: Verify active service account
+        run: gcloud auth list
+
       - name: Verify Service Account Permissions
         run: |
-          SA_EMAIL="terraform@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
+          SA_EMAIL="terraform-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
           echo "Verifying roles for service account: $SA_EMAIL"
 
           ROLES=$(gcloud projects get-iam-policy ${{ env.PROJECT_ID }} \
@@ -37,7 +40,7 @@ jobs:
             --format="value(bindings.role)" \
             --filter="bindings.members:serviceAccount:$SA_EMAIL")
 
-          REQUIRED_ROLES=("roles/container.admin" "roles/iam.serviceAccountUser")
+          REQUIRED_ROLES=("roles/container.admin" "roles/iam.serviceAccountUser" "roles/artifactregistry.writer")
           for ROLE in "${REQUIRED_ROLES[@]}"; do
             if ! echo "$ROLES" | grep -q "$ROLE"; then
               echo "Error: Service account is missing required role: $ROLE"
@@ -66,6 +69,9 @@ jobs:
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ env.PROJECT_ID }}
+
+      - name: Verify active service account
+        run: gcloud auth list
 
       - name: Configure Docker
         run: gcloud auth configure-docker
