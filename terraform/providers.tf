@@ -20,6 +20,7 @@ terraform {
 provider "google" {
   project = var.project_id
   zone    = var.zone
+  region  = substr(var.zone, 0, length(var.zone) - 2)
 }
 
 data "google_client_config" "default" {}

@@ -37,19 +37,27 @@ def get_gcp_metric(metric_type, minutes=5):
         }
     )
 
-    results = client.list_time_series(
-        request={
-            "name": project_name,
-            "filter": f'metric.type = "{metric_type}"',
-            "interval": interval,
-            "view": monitoring_v3.ListTimeSeriesRequest.TimeSeriesView.FULL,
-        }
-    )
+    try:
+        results = client.list_time_series(
+            request={
+                "name": project_name,
+                "filter": f'metric.type = "{metric_type}"',
+                "interval": interval,
+                "view": monitoring_v3.ListTimeSeriesRequest.TimeSeriesView.FULL,
+            }
+        )
 
-    values = [point.value.double_value for result in results for point in result.points]
-    if values:
-        return sum(values) / len(values)  # Return average
-    return None
+        values = [
+            point.value.double_value for result in results for point in result.points
+        ]
+        if values:
+            return sum(values) / len(values)  # Return average
+        else:
+            logger.warning(f"No data points found for metric: {metric_type}")
+            return None
+    except Exception as e:
+        logger.error(f"Error fetching metric {metric_type}: {str(e)}")
+        return None
 
 
 @app.route("/time", methods=["GET"])
@@ -95,39 +103,36 @@ def health_check():
     }
 
     # Check GCP metrics
-    try:
-        gcp_metrics = [
-            ("kubernetes.io/container/cpu/allocatable_utilization", "cpu_utilization"),
-            ("kubernetes.io/container/memory/used_bytes", "memory_usage_bytes"),
-            (
-                "kubernetes.io/container/network/received_bytes_count",
+    gcp_metrics = [
+        ("kubernetes.io/container/cpu/allocatable_utilization", "cpu_utilization"),
+        ("kubernetes.io/container/memory/used_bytes", "memory_usage_bytes"),
+        (
+            "kubernetes.io/container/network/received_bytes_count",
+            "network_ingress_bytes_per_second",
+        ),
+        (
+            "kubernetes.io/container/network/sent_bytes_count",
+            "network_egress_bytes_per_second",
+        ),
+        ("kubernetes.io/container/request_count", "requests_per_minute"),
+        ("kubernetes.io/container/uptime", "uptime_hours"),
+    ]
+
+    for metric_type, metric_name in gcp_metrics:
+        value = get_gcp_metric(metric_type)
+        if value is not None:
+            if metric_name in [
                 "network_ingress_bytes_per_second",
-            ),
-            (
-                "kubernetes.io/container/network/sent_bytes_count",
                 "network_egress_bytes_per_second",
-            ),
-            ("kubernetes.io/container/request_count", "requests_per_minute"),
-            ("kubernetes.io/container/uptime", "uptime_hours"),
-        ]
-
-        for metric_type, metric_name in gcp_metrics:
-            value = get_gcp_metric(metric_type)
-            if value is not None:
-                if metric_name in [
-                    "network_ingress_bytes_per_second",
-                    "network_egress_bytes_per_second",
-                ]:
-                    value /= 300
-                elif metric_name == "requests_per_minute":
-                    value *= 12
-                elif metric_name == "uptime_hours":
-                    value /= 3600
-                health_status["gcp_metrics"][metric_name] = value
-
-    except Exception as e:
-        logger.error(f"Error fetching GCP metrics: {str(e)}")
-        health_status["gcp_metrics_error"] = str(e)
+            ]:
+                value /= 300
+            elif metric_name == "requests_per_minute":
+                value *= 12
+            elif metric_name == "uptime_hours":
+                value /= 3600
+            health_status["gcp_metrics"][metric_name] = value
+        else:
+            health_status["gcp_metrics"][metric_name] = "N/A"
 
     # Perform a self-check by calling the /time endpoint
     try:

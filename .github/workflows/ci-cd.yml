@@ -89,6 +89,9 @@ jobs:
           docker build -t gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA .
           docker push gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA
 
+      - name: Remove Terraform Lock
+        run: gsutil rm gs://${{ env.PROJECT_ID }}-tfstate/terraform/state/default.tflock || true
+
       - name: Create or update terraform.tfvars
         run: |
           echo "project_id = \"$PROJECT_ID\"" > terraform/terraform.tfvars
@@ -112,6 +115,11 @@ jobs:
       - name: Get GKE Credentials
         run: |
           gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
+
+      - name: Deploy to GKE
+        run: |
+          kubectl apply -f terraform/modules/kubernetes_resources/k8s-resources.yaml
+          kubectl set image deployment/time-api time-api=gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA -n time-api
 
       - name: Test API
         run: |
