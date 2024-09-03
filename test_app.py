@@ -155,7 +155,7 @@ class TestApp(unittest.TestCase):
         self.assertEqual(data["time_endpoint_check"], "passed")
 
     def test_rate_limiting(self):
-        for _ in range(10):
+        for _ in range(20):
             response = self.client.get("/time")
             self.assertEqual(response.status_code, 200)
 

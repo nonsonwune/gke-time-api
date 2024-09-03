@@ -61,7 +61,7 @@ def get_gcp_metric(metric_type, minutes=5):
 
 
 @app.route("/time", methods=["GET"])
-@limiter.limit("10 per minute")
+@limiter.limit("20 per minute")
 def get_current_time():
     start_time = time.time()
     try:
