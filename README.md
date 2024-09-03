@@ -8,7 +8,7 @@ This project deploys a simple Time API to Google Kubernetes Engine (GKE) using T
 
 - Google Kubernetes Engine (GKE) cluster
 - VPC networking and subnets
-- NAT gateway for managing egress traffic
+- NAT gateway for managing egrss traffic
 - Firewall rules for secure communication
 - Kubernetes resources (Namespaces, Deployments, Services, ConfigMaps, and Ingress)
 
