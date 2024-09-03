@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project deploys a simple Time API to Google Kubernetes Engine (GKE) using Terraform for Infrastructure as Code (IaC) and GitHub Actions for Continuous Deployment (CD). The API returns the current time when accessed via a GET request.
+This project deploys a simple Time API to Google Kubernetes Engine (GKE) using Terraform for Infrastructure as Code (IaC) and GitHub Actions for Continuous Deployment (CD). The API return the current time when accessed via a GET request.
 
 ## Infrastructure Components
 
@@ -15,6 +15,7 @@ This project deploys a simple Time API to Google Kubernetes Engine (GKE) using T
 ## API Functionality
 
 The API provides the following information when accessed:
+
 - Current time (in Africa/Lagos timezone)
 - Email address
 - Timezone
@@ -30,45 +31,53 @@ The API provides the following information when accessed:
 ## Local Setup and Testing
 
 1. Clone the repository:
+
    ```
    git clone https://github.com/your-username/time-api-gke-project.git
    cd time-api-gke-project
    ```
 
 2. Set up Google Cloud credentials:
+
    ```
    gcloud auth application-default login
    ```
 
 3. Set your GCP project ID:
+
    ```
    export PROJECT_ID=time-api-gke-project-434215
    gcloud config set project $PROJECT_ID
    ```
 
 4. Enable necessary GCP APIs:
+
    ```
    gcloud services enable compute.googleapis.com container.googleapis.com cloudresourcemanager.googleapis.com monitoring.googleapis.com
    ```
 
 5. Initialize Terraform:
+
    ```
    cd terraform
    terraform init
    ```
 
 6. Plan and apply the Terraform configuration:
+
    ```
    terraform plan -out=tfplan
    terraform apply tfplan
    ```
 
 7. Configure kubectl to use the new cluster:
+
    ```
    gcloud container clusters get-credentials time-api-gke-cluster --zone us-central1-a --project $PROJECT_ID
    ```
 
 8. Verify the deployment:
+
    ```
    kubectl get pods -n time-api
    kubectl get services -n time-api
@@ -85,6 +94,7 @@ The API provides the following information when accessed:
 To run the unit tests for the API:
 
 1. Install the required packages:
+
    ```
    pip install -r requirements.txt
    ```
@@ -120,6 +130,7 @@ Basic monitoring and alerting are set up using Google Cloud Monitoring. An alert
 The API can be accessed at: `http://EXTERNAL_IP/time`
 
 Replace EXTERNAL_IP with the LoadBalancer's external IP address, which can be obtained using:
+
 ```
 kubectl get service time-api -n time-api
 ```
@@ -129,6 +140,7 @@ kubectl get service time-api -n time-api
 To scale the application:
 
 1. Adjust the number of replicas in the Kubernetes deployment:
+
    ```
    kubectl scale deployment time-api -n time-api --replicas=3
    ```
