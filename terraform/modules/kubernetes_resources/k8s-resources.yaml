@@ -21,6 +21,8 @@ spec:
         iam.gke.io/gcp-service-account: gke-node-sa@time-api-gke-project-434215.iam.gserviceaccount.com
     spec:
       serviceAccountName: gke-node-sa
+      imagePullSecrets:
+        - name: gcr-json-key
       containers:
         - name: time-api
           image: gcr.io/${project_id}/time-api:${image_tag}
