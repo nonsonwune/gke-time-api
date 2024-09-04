@@ -24,9 +24,14 @@ resource "kubernetes_deployment" "time_api" {
         labels = {
           app = "time-api"
         }
+        annotations = {
+          "iam.gke.io/gcp-service-account" = "gke-node-sa@time-api-gke-project-434215.iam.gserviceaccount.com"
+        }
       }
 
       spec {
+        service_account_name = "gke-node-sa"
+
         container {
           image = "gcr.io/${var.project_id}/time-api:${var.image_tag}"
           name  = "time-api"
@@ -86,5 +91,43 @@ resource "kubernetes_service" "time_api" {
     }
 
     type = "LoadBalancer"
+  }
+}
+
+resource "kubernetes_network_policy" "allow_time_api" {
+  metadata {
+    name      = "allow-time-api"
+    namespace = kubernetes_namespace.time_api.metadata[0].name
+  }
+
+  spec {
+    pod_selector {
+      match_labels = {
+        app = "time-api"
+      }
+    }
+
+    ingress {
+      from {
+        ip_block {
+          cidr = "0.0.0.0/0"
+        }
+      }
+
+      ports {
+        port     = "8080"
+        protocol = "TCP"
+      }
+    }
+
+    egress {
+      to {
+        ip_block {
+          cidr = "0.0.0.0/0"
+        }
+      }
+    }
+
+    policy_types = ["Ingress", "Egress"]
   }
 }
