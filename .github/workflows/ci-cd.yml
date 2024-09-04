@@ -96,7 +96,7 @@ jobs:
         run: |
           echo "project_id = \"$PROJECT_ID\"" > terraform/terraform.tfvars
           echo "zone = \"$GKE_ZONE\"" >> terraform/terraform.tfvars
-          echo "gke_num_nodes = 2" >> terraform/terraform.tfvars
+          echo "gke_num_nodes = 3" >> terraform/terraform.tfvars
           echo "image_tag = \"$GITHUB_SHA\"" >> terraform/terraform.tfvars
 
       - name: Terraform Init
@@ -116,19 +116,39 @@ jobs:
         run: |
           gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
 
+      - name: Update Kubernetes Manifest
+        run: |
+          sed -i 's/${PROJECT_ID}/'$PROJECT_ID'/g' terraform/modules/kubernetes_resources/k8s-resources.yaml
+          sed -i 's/${IMAGE_TAG}/'$GITHUB_SHA'/g' terraform/modules/kubernetes_resources/k8s-resources.yaml
+
       - name: Deploy to GKE
         run: |
           kubectl apply -f terraform/modules/kubernetes_resources/k8s-resources.yaml
-          kubectl set image deployment/time-api time-api=gcr.io/$PROJECT_ID/$IMAGE:$GITHUB_SHA -n time-api
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/time-api -n time-api --timeout=300s
 
       - name: Test API
         run: |
           EXTERNAL_IP=$(kubectl get service time-api -n time-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-          response=$(curl -s http://$EXTERNAL_IP/time)
-          echo $response
-          if [[ $response == *"current_time"* ]]; then
+          max_retries=10
+          count=0
+          while [ -z "$EXTERNAL_IP" ] && [ $count -lt $max_retries ]; do
+            sleep 30
+            EXTERNAL_IP=$(kubectl get service time-api -n time-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            count=$((count+1))
+          done
+
+          if [ -z "$EXTERNAL_IP" ]; then
+            echo "Failed to get EXTERNAL_IP after $max_retries attempts"
+            exit 1
+          fi
+
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://$EXTERNAL_IP/time)
+          if [[ $response == "200" ]]; then
             echo "API test passed"
           else
-            echo "API test failed"
+            echo "API test failed with HTTP status code: $response"
             exit 1
           fi
