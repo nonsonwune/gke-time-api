@@ -34,3 +34,20 @@ resource "google_project_iam_member" "gke_node_sa_monitoring_viewer" {
   role    = "roles/monitoring.viewer"
   member  = "serviceAccount:${local.gke_node_sa_email}"
 }
+
+data "google_service_account" "time_api_sa" {
+  account_id = "time-api-sa"
+  project    = var.project_id
+}
+
+resource "google_project_iam_member" "time_api_sa_monitoring_viewer" {
+  project = var.project_id
+  role    = "roles/monitoring.viewer"
+  member  = "serviceAccount:${data.google_service_account.time_api_sa.email}"
+}
+
+resource "google_project_iam_member" "time_api_sa_monitoring_metric_writer" {
+  project = var.project_id
+  role    = "roles/monitoring.metricWriter"
+  member  = "serviceAccount:${data.google_service_account.time_api_sa.email}"
+}

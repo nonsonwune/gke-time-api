@@ -24,13 +24,10 @@ resource "kubernetes_deployment" "time_api" {
         labels = {
           app = "time-api"
         }
-        annotations = {
-          "iam.gke.io/gcp-service-account" = "gke-node-sa@time-api-gke-project-434215.iam.gserviceaccount.com"
-        }
       }
 
       spec {
-        service_account_name = "gke-node-sa"
+        service_account_name = kubernetes_service_account.time_api_sa.metadata[0].name
         image_pull_secrets {
           name = "gcr-json-key"
         }
@@ -53,6 +50,11 @@ resource "kubernetes_deployment" "time_api" {
               cpu    = "100m"
               memory = "64Mi"
             }
+          }
+
+          env {
+            name  = "GCP_PROJECT_ID"
+            value = var.project_id
           }
 
           liveness_probe {
@@ -220,4 +222,40 @@ resource "kubernetes_ingress_v1" "time_api_ingress" {
       }
     }
   }
+}
+
+data "google_service_account" "time_api_sa" {
+  account_id = "time-api-sa"
+  project    = var.project_id
+}
+
+resource "kubernetes_service_account" "time_api_sa" {
+  metadata {
+    name      = "time-api-sa"
+    namespace = kubernetes_namespace.time_api.metadata[0].name
+    annotations = {
+      "iam.gke.io/gcp-service-account" = data.google_service_account.time_api_sa.email
+    }
+  }
+}
+
+resource "google_project_iam_member" "time_api_sa_monitoring_viewer" {
+  project = var.project_id
+  role    = "roles/monitoring.viewer"
+  member  = "serviceAccount:${data.google_service_account.time_api_sa.email}"
+}
+
+resource "google_project_iam_member" "time_api_sa_monitoring_metric_writer" {
+  project = var.project_id
+  role    = "roles/monitoring.metricWriter"
+  member  = "serviceAccount:${data.google_service_account.time_api_sa.email}"
+}
+
+resource "google_service_account_iam_binding" "time_api_sa_workload_identity" {
+  service_account_id = data.google_service_account.time_api_sa.name
+  role               = "roles/iam.workloadIdentityUser"
+
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.time_api.metadata[0].name}/${kubernetes_service_account.time_api_sa.metadata[0].name}]",
+  ]
 }
