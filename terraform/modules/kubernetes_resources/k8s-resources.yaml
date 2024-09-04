@@ -26,6 +26,7 @@ spec:
       containers:
         - name: time-api
           image: gcr.io/${project_id}/time-api:${image_tag}
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           resources:
@@ -64,17 +65,37 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-all
+  name: default-deny-all
   namespace: time-api
 spec:
   podSelector: {}
   policyTypes:
     - Ingress
     - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-time-api
+  namespace: time-api
+spec:
+  podSelector:
+    matchLabels:
+      app: time-api
+  policyTypes:
+    - Ingress
+    - Egress
   ingress:
-    - {}
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 8080
   egress:
-    - {}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
