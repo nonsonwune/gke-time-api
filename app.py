@@ -125,11 +125,11 @@ def health_check():
                 "network_ingress_bytes_per_second",
                 "network_egress_bytes_per_second",
             ]:
-                value /= 300
+                value /= 300  # Convert to per second
             elif metric_name == "requests_per_minute":
-                value *= 12
+                value *= 12  # Convert to per minute
             elif metric_name == "uptime_hours":
-                value /= 3600
+                value /= 3600  # Convert to hours
             health_status["gcp_metrics"][metric_name] = value
         else:
             health_status["gcp_metrics"][metric_name] = "N/A"

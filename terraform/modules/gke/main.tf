@@ -1,5 +1,3 @@
-# modules/gke/main.tf
-
 resource "google_container_cluster" "time_api_cluster" {
   name     = "time-api-gke-cluster"
   location = "${var.region}-a"
@@ -27,11 +25,11 @@ resource "google_container_cluster" "time_api_cluster" {
   }
 }
 
-resource "google_container_node_pool" "time_api_nodes" {
-  name       = "time-api-node-pool"
+resource "google_container_node_pool" "assignment_nodes" {
+  name       = "new-assignment-node-pool"
   location   = "${var.region}-a"
   cluster    = google_container_cluster.time_api_cluster.name
-  node_count = var.gke_num_nodes
+  node_count = 2 # Increased to 2 nodes
 
   node_config {
     oauth_scopes = [
@@ -39,13 +37,25 @@ resource "google_container_node_pool" "time_api_nodes" {
     ]
 
     labels = {
-      env = "time-api-production"
+      env = "time-api-assignment"
     }
 
-    machine_type = "e2-standard-2"
-    tags         = ["gke-node", "time-api-gke"]
+    machine_type    = "e2-medium" # Upgraded to a larger machine type
+    disk_size_gb    = 20
+    service_account = "gke-gcr-puller@time-api-gke-project-434215.iam.gserviceaccount.com"
+    tags            = ["gke-node", "time-api-gke"]
     metadata = {
       disable-legacy-endpoints = "true"
     }
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  upgrade_settings {
+    max_surge       = 1
+    max_unavailable = 0
   }
 }

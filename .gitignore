@@ -5,3 +5,4 @@
 clau_/
 scripts_/
 *.json
+env/

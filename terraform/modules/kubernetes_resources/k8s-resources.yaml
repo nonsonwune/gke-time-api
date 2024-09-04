@@ -17,7 +17,10 @@ spec:
     metadata:
       labels:
         app: time-api
+      annotations:
+        iam.gke.io/gcp-service-account: gke-node-sa@time-api-gke-project-434215.iam.gserviceaccount.com
     spec:
+      serviceAccountName: default
       containers:
         - name: time-api
           image: gcr.io/${project_id}/time-api:${image_tag}
