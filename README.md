@@ -2,13 +2,13 @@
 
 ## Project Overview
 
-This project deploys a simple Time API to Google Kubernetes Engine (GKE) using Terraform for Infrastructure as Code (IaC) and GitHub Actions for Continuous Deployment (CD). The API return the current time when accessed via a GET request.
+This project deploys a simple Time API to Google Kubernetes Engine (GKE) using Terraform for Infrastructure as Code (IaC) and GitHub Actions for Continuous Integration and Deployment (CI/CD). The API returns the current time when accessed via a GET request.
 
 ## Infrastructure Components
 
 - Google Kubernetes Engine (GKE) cluster
 - VPC networking and subnets
-- NAT gateway for managing egrss traffic
+- NAT gateway for managing egress traffic
 - Firewall rules for secure communication
 - Kubernetes resources (Namespaces, Deployments, Services, ConfigMaps, and Ingress)
 
@@ -46,7 +46,7 @@ The API provides the following information when accessed:
 3. Set your GCP project ID:
 
    ```
-   export PROJECT_ID=time-api-gke-project-434215
+   export PROJECT_ID=your-project-id
    gcloud config set project $PROJECT_ID
    ```
 
@@ -112,7 +112,9 @@ The project uses GitHub Actions for CI/CD. On each push to the main branch, the 
 2. Pushes it to Google Container Registry
 3. Updates the Terraform configuration
 4. Applies the Terraform changes
-5. Verifies that the API is accessible by running a test
+5. Updates the Kubernetes manifest with the correct PROJECT_ID and IMAGE_TAG
+6. Deploys the updated Kubernetes resources
+7. Verifies that the API is accessible by running a test with retries
 
 ## Monitoring and Alerting
 
@@ -124,6 +126,7 @@ Basic monitoring and alerting are set up using Google Cloud Monitoring. An alert
 - A NAT gateway manages outbound traffic from the GKE cluster.
 - Firewall rules secure the infrastructure.
 - Network policies control traffic within the cluster.
+- Workload Identity is used for secure authentication between GKE and GCP services.
 
 ## Accessing the Deployed API
 
@@ -145,7 +148,21 @@ To scale the application:
    kubectl scale deployment time-api -n time-api --replicas=3
    ```
 
-2. To scale the GKE cluster, modify the `gke_num_nodes` variable in `terraform/terraform.tfvars` and reapply the Terraform configuration.
+2. The GKE cluster now uses node auto-provisioning with a maximum of 5 nodes. It will automatically scale based on resource demands.
+
+## Resource Management
+
+- CPU requests have been set to 50m and limits to 100m.
+- Memory requests are set to 64Mi and limits to 128Mi.
+- These settings ensure efficient resource utilization and prevent resource starvation.
+
+## Improvements Made
+
+1. Implemented Workload Identity for secure authentication.
+2. Adjusted resource requests and limits for better performance and efficiency.
+3. Enabled node auto-provisioning for automatic scaling.
+4. Enhanced the CI/CD pipeline with better error handling and verification steps.
+5. Improved the Kubernetes manifest with proper variable substitution.
 
 ## Future Improvements
 
@@ -153,6 +170,7 @@ To scale the application:
 - Enhance monitoring and logging capabilities
 - Implement more comprehensive security measures
 - Optimize for high availability and disaster recovery
+- Implement a staging environment for testing before production deployment
 
 ## Contributing
 

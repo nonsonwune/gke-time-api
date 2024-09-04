@@ -24,7 +24,7 @@ client = monitoring_v3.MetricServiceClient()
 
 
 def get_gcp_metric(metric_type, minutes=5):
-    project_id = "time-api-gke-project-434215"
+    project_id = os.environ.get("GCP_PROJECT_ID", "time-api-gke-project-434215")
     project_name = f"projects/{project_id}"
 
     now = time.time()
